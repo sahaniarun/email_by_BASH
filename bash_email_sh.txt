@@ -1,0 +1,132 @@
+Bash Script : Mail Notification
+---------------------------------------
+
+Set your gmail app password
+
+Install required packages on your centos8
+
+
+
+dnf install https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/s/ssmtp-2.64-14.el7.x86_64.rpm
+yum -y install mailx
+
+
+Change the mail setting parameters
+------------------------------------------
+
+vim /etc/ssmtp/ssmtp.conf
+
+mailhub=smtp.gmail.com:587
+useSTARTTLS=YES
+AuthUser=username-here
+AuthPass=password-here
+TLS_CA_File=/etc/pki/tls/certs/ca-bundle.crt
+
+
+Check from command Line if we can send mail or not
+-------------------------------------------------
+# echo "Test message from Linux server using ssmtp" | sudo ssmtp -vvv receivers-email@gmail.com
+# echo "Here add your email body" | mail -s "Here specify your email subject" your_recepient_email@yourdomain.com
+
+
+
+Now Make the script file
+-----------------------
+
+
+#!/bin/sh  
+SUBJECT="Test Subject"
+TO="receiver email address"
+MESSAGE="Hey There! This is a test mail"
+
+#echo $MESSAGE | echo mail -s $SUBJECT | sudo ssmtp -vvv $TO
+echo $MESSAGE | mail -s $SUBJECT sahaniarun@gmail.com
+
+
+Check and Verify
+-------------------
+
+Examples / Use cases
+
+Send mail when the memory consumption is greater than 60%
+
+
+Use the following script
+-----------------------
+#!/bin/bash
+musage=$(free | awk '/Mem/{printf("RAM Usage: %.2f%\n"), $3/$2*100}' |  awk '{print $3}' | cut -d"." -f1)
+
+if [ $musage -ge 60 ]; then
+echo "Current Memory Usage: $musage%" | mail -s "Memory Usage on $(hostname) at $(date)" 
+sahaniarun@gmail.com
+else
+echo "Memory usage is in under threshold"
+fi
+---------
+
+Check the current memory status
+# free -h
+
+
+
+
+Run the below command to memory stress up to 90%
+
+stress-ng --vm-bytes $(awk '/MemAvailable/{printf "%d\n", $2 * 0.9;}' < /proc/meminfo)k --vm-keep -m 1
+
+# free -h
+
+Now run the above script
+
+
+Check Memory,CPU,Disk Utilization and threshold
+------------------------------------------------
+#!/bin/bash
+echo `date`
+#cpu use threshold
+cpu_threshold='80'
+ #mem idle threshold
+mem_threshold='50'
+ #disk use threshold
+disk_threshold='90'
+#---cpu
+cpu_usage () {
+cpu_idle=`top -b -n 1 | grep Cpu | awk '{print $8}'|cut -f 1 -d "."`
+cpu_use=`expr 100 - $cpu_idle`
+ echo "cpu utilization: $cpu_use"
+if [ $cpu_use -gt $cpu_threshold ]
+    then
+        echo "cpu warning!!!"
+    else
+        echo "cpu ok!!!"
+fi
+}
+#---mem
+mem_usage () {
+ #MB units
+mem_free=`free -g | grep "Mem" | awk '{print $4+$6}'`
+ echo "memory space remaining : $mem_free MB"
+if [ $mem_free -lt $mem_threshold  ]
+    then
+        echo "mem warning!!!"
+    else
+        echo "mem ok!!!"
+fi
+}
+
+#---disk
+disk_usage () {
+disk_use=`df -P | grep /dev | grep -v -E '(tmp|boot)' | awk '{print $5}' | cut -f 1 -d "%"`
+ echo "disk usage : $disk_use" 
+if [ $disk_use -gt $disk_threshold ]
+    then
+        echo "disk warning!!!"
+    else
+        echo "disk ok!!!"
+fi
+ 
+ 
+}
+cpu_usage
+mem_usage
+disk_usage
